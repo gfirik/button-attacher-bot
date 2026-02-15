@@ -559,16 +559,24 @@ mod destination_keyboard {
     use super::json;
 
     fn build_destination_keyboard() -> serde_json::Value {
-        // Single button for groups/channels + send to me
+        // Two buttons side by side: group + channel, then send to me
         // No administrator_rights to avoid ADMIN_RIGHTS_EMPTY errors
         json!({
             "keyboard": [
                 [
                     {
-                        "text": "📢 Choose a group or channel",
+                        "text": "👥 Choose a group",
                         "request_chat": {
                             "request_id": 1,
                             "chat_is_channel": false,
+                            "bot_is_member": true
+                        }
+                    },
+                    {
+                        "text": "📢 Choose a channel",
+                        "request_chat": {
+                            "request_id": 2,
+                            "chat_is_channel": true,
                             "bot_is_member": true
                         }
                     }
@@ -596,16 +604,19 @@ mod destination_keyboard {
         let rows = keyboard["keyboard"].as_array().unwrap();
         assert_eq!(rows.len(), 2);
 
-        // First row: chat picker
-        let chat_picker = &rows[0][0];
-        assert_eq!(chat_picker["text"], "📢 Choose a group or channel");
-        assert!(chat_picker.get("request_chat").is_some());
+        // First row: group picker + channel picker side by side
+        let first_row = rows[0].as_array().unwrap();
+        assert_eq!(first_row.len(), 2);
 
-        let request_chat = &chat_picker["request_chat"];
-        assert_eq!(request_chat["request_id"], 1);
-        assert_eq!(request_chat["bot_is_member"], true);
-        // No bot_administrator_rights - this is intentional!
-        assert!(request_chat.get("bot_administrator_rights").is_none());
+        let group_picker = &first_row[0];
+        assert_eq!(group_picker["text"], "👥 Choose a group");
+        assert_eq!(group_picker["request_chat"]["chat_is_channel"], false);
+        assert_eq!(group_picker["request_chat"]["bot_is_member"], true);
+
+        let channel_picker = &first_row[1];
+        assert_eq!(channel_picker["text"], "📢 Choose a channel");
+        assert_eq!(channel_picker["request_chat"]["chat_is_channel"], true);
+        assert_eq!(channel_picker["request_chat"]["bot_is_member"], true);
 
         // Second row: send to me
         let send_to_me = &rows[1][0];
