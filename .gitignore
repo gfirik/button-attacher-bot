@@ -1,0 +1,9 @@
+/target
+.env
+*.pdb
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/

@@ -1,0 +1,28 @@
+[package]
+name = "button-attach-bot"
+version = "0.1.0"
+edition = "2021"
+authors = ["Firdavs"]
+description = "A Telegram bot that attaches customizable styled buttons to channel and group posts"
+license = "MIT"
+repository = "https://github.com/yourusername/button-attach-bot"
+keywords = ["telegram", "bot", "buttons", "channels"]
+categories = ["command-line-utilities"]
+
+[dependencies]
+teloxide = { version = "0.13", default-features = false, features = ["macros", "ctrlc_handler", "rustls"] }
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+dotenvy = "0.15"
+pretty_env_logger = "0.5"
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[[bin]]
+name = "button-attach-bot"
+path = "src/main.rs"
