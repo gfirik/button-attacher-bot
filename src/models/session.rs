@@ -42,8 +42,12 @@ impl ButtonConfig {
             button["style"] = serde_json::json!(style);
         }
 
+        // icon_custom_emoji_id must be a number, not a string
         if let Some(ref emoji_id) = self.icon_custom_emoji_id {
-            button["icon_custom_emoji_id"] = serde_json::json!(emoji_id);
+            if let Ok(emoji_num) = emoji_id.parse::<u64>() {
+                button["icon_custom_emoji_id"] = serde_json::json!(emoji_num);
+            }
+            // If it can't be parsed as a number, skip it (invalid input)
         }
 
         button
