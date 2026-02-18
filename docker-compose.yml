@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: button-attach-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - RUST_LOG=${RUST_LOG:-info}
+      - DATABASE_URL=/app/data/bot.db
+    volumes:
+      # Persist SQLite database
+      - bot_data:/app/data
+    # Resource limits for cost efficiency
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 32M
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=10M,mode=1777
+
+volumes:
+  bot_data:
+    driver: local

@@ -3,6 +3,7 @@
 use teloxide::prelude::*;
 use teloxide::types::MessageKind;
 
+use crate::db::{Analytics, EventType};
 use crate::keyboard::{
     build_confirm_keyboard, build_remove_keyboard, raw_send_message, style_display_name,
     SEND_TO_ME_TEXT,
@@ -21,8 +22,11 @@ pub async fn handle_destination(
     msg: Message,
     dialogue: crate::Dialogue,
     config: Config,
+    analytics: Analytics,
     mut data: SessionData,
 ) -> crate::HandlerResult {
+    let user_id = msg.from.as_ref().map(|u| u.id.0 as i64).unwrap_or(0);
+
     // Check for chat_shared event via MessageKind
     if let MessageKind::ChatShared(msg_chat_shared) = &msg.kind {
         let chat_id = msg_chat_shared.chat_shared.chat_id.0;
@@ -32,12 +36,20 @@ pub async fn handle_destination(
             chat_id
         );
         data.destination_chat_id = Some(chat_id);
+
+        // Track destination selected event
+        let event_data = serde_json::json!({ "destination_chat_id": chat_id }).to_string();
+        let _ = analytics.track_event(user_id, EventType::DestinationSelected, Some(&event_data));
     }
     // Check for "Send to me" text
     else if let Some(text) = msg.text() {
         if text == SEND_TO_ME_TEXT {
             log::info!("User {} selected to send to themselves", msg.chat.id);
             data.destination_chat_id = Some(msg.chat.id.0);
+
+            // Track destination selected event
+            let event_data = serde_json::json!({ "destination_chat_id": msg.chat.id.0, "self": true }).to_string();
+            let _ = analytics.track_event(user_id, EventType::DestinationSelected, Some(&event_data));
         } else {
             // Unexpected text, remind user to pick a destination
             bot.send_message(

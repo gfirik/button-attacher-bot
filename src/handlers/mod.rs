@@ -1,11 +1,13 @@
 //! Message and callback handlers for the bot.
 
+pub mod admin;
 pub mod configure;
 pub mod content;
 pub mod destination;
 pub mod publish;
 pub mod start;
 
+pub use admin::{handle_stats, handle_users, handle_broadcast, handle_block, handle_unblock};
 pub use configure::{handle_button_text, handle_emoji_callback, handle_emoji_text, handle_style_callback, handle_url};
 pub use content::handle_content;
 pub use destination::handle_destination;

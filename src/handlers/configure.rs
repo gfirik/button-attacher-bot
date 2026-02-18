@@ -3,6 +3,7 @@
 use teloxide::prelude::*;
 use teloxide::types::ParseMode;
 
+use crate::db::{Analytics, EventType};
 use crate::keyboard::{
     build_confirm_keyboard, build_emoji_keyboard, build_style_keyboard,
     map_style_callback, raw_answer_callback_query, raw_edit_message_text,
@@ -151,10 +152,12 @@ pub async fn handle_emoji_callback(
     callback: CallbackQuery,
     dialogue: crate::Dialogue,
     config: Config,
+    analytics: Analytics,
     mut data: SessionData,
 ) -> crate::HandlerResult {
     let callback_data = callback.data.as_deref().unwrap_or("");
     let chat_id = callback.message.as_ref().map(|m| m.chat().id.0).unwrap_or(0);
+    let user_id = callback.from.id.0 as i64;
 
     // Answer the callback
     raw_answer_callback_query(&config.bot_token, &callback.id, None).await?;
@@ -165,7 +168,7 @@ pub async fn handle_emoji_callback(
     }
 
     // Finalize the button
-    finalize_button_and_show_summary(bot, dialogue, config, data, chat_id).await
+    finalize_button_and_show_summary(bot, dialogue, config, analytics, data, chat_id, user_id).await
 }
 
 /// Handle emoji text input when in AwaitingEmoji state.
@@ -174,6 +177,7 @@ pub async fn handle_emoji_text(
     msg: Message,
     dialogue: crate::Dialogue,
     config: Config,
+    analytics: Analytics,
     mut data: SessionData,
 ) -> crate::HandlerResult {
     let emoji_id = match msg.text() {
@@ -185,10 +189,12 @@ pub async fn handle_emoji_text(
         }
     };
 
+    let user_id = msg.from.as_ref().map(|u| u.id.0 as i64).unwrap_or(0);
+
     log::info!("User {} set emoji ID: {}", msg.chat.id, emoji_id);
     data.current_button_emoji = Some(emoji_id);
 
-    finalize_button_and_show_summary(bot, dialogue, config, data, msg.chat.id.0).await
+    finalize_button_and_show_summary(bot, dialogue, config, analytics, data, msg.chat.id.0, user_id).await
 }
 
 /// Finalize the current button configuration and show the summary.
@@ -196,8 +202,10 @@ async fn finalize_button_and_show_summary(
     _bot: Bot,
     dialogue: crate::Dialogue,
     config: Config,
+    analytics: Analytics,
     mut data: SessionData,
     chat_id: i64,
+    user_id: i64,
 ) -> crate::HandlerResult {
     // Store emoji before finalizing
     let emoji_display = data
@@ -224,6 +232,15 @@ async fn finalize_button_and_show_summary(
             return Ok(());
         }
     };
+
+    // Track button configured event
+    let event_data = serde_json::json!({
+        "style": button.style,
+        "has_emoji": button.icon_custom_emoji_id.is_some(),
+        "button_number": data.button_count()
+    })
+    .to_string();
+    let _ = analytics.track_event(user_id, EventType::ButtonConfigured, Some(&event_data));
 
     // Build summary message
     let style_display = style_display_name(button.style.as_deref());

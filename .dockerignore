@@ -1,0 +1,39 @@
+# Git
+.git
+.gitignore
+
+# Build artifacts
+target/
+*.rs.bk
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment files (will be mounted separately)
+.env
+.env.local
+.env.*.local
+
+# Documentation
+README.md
+LICENSE
+docs/
+
+# Tests
+tests/
+*.test.rs
+
+# Local data
+data/
+*.db
+*.sqlite
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+logs/

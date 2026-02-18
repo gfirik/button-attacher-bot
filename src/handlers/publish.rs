@@ -2,6 +2,7 @@
 
 use teloxide::prelude::*;
 
+use crate::db::Analytics;
 use crate::keyboard::{
     build_destination_keyboard, build_inline_keyboard, raw_answer_callback_query,
     raw_copy_message, raw_send_message,
@@ -16,10 +17,12 @@ pub async fn handle_confirm_callback(
     callback: CallbackQuery,
     dialogue: crate::Dialogue,
     config: Config,
+    analytics: Analytics,
     mut data: SessionData,
 ) -> crate::HandlerResult {
     let callback_data = callback.data.as_deref().unwrap_or("");
     let chat_id = callback.message.as_ref().map(|m| m.chat().id.0).unwrap_or(0);
+    let user_id = callback.from.id.0 as i64;
 
     // Answer the callback
     raw_answer_callback_query(&config.bot_token, &callback.id, None).await?;
@@ -99,6 +102,21 @@ pub async fn handle_confirm_callback(
                         "Successfully published message to chat {}",
                         destination_chat_id
                     );
+
+                    // Track publication analytics
+                    let styles: Vec<Option<String>> = data
+                        .buttons
+                        .iter()
+                        .map(|b| b.style.clone())
+                        .collect();
+
+                    let _ = analytics.track_publication(
+                        user_id,
+                        destination_chat_id,
+                        data.buttons.len(),
+                        &styles,
+                    );
+
                     bot.send_message(
                         ChatId(chat_id),
                         "✅ Posted successfully! The buttons will work forever, even when I'm offline.\n\nSend me more content anytime!",

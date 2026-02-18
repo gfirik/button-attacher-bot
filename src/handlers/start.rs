@@ -3,6 +3,7 @@
 use teloxide::prelude::*;
 use teloxide::types::ParseMode;
 
+use crate::db::{Analytics, EventType};
 use crate::state::BotState;
 
 /// The welcome/help message shown to users.
@@ -28,8 +29,21 @@ pub async fn handle_start(
     bot: Bot,
     msg: Message,
     dialogue: crate::Dialogue,
+    analytics: Analytics,
 ) -> crate::HandlerResult {
     log::info!("User {} started the bot", msg.chat.id);
+
+    // Track user and event
+    if let Some(user) = msg.from.as_ref() {
+        let _ = analytics.track_user(
+            user.id.0 as i64,
+            user.username.as_deref(),
+            Some(&user.first_name),
+            user.last_name.as_deref(),
+            user.language_code.as_deref(),
+        );
+        let _ = analytics.track_event(user.id.0 as i64, EventType::Start, None);
+    }
 
     // Reset to idle state
     dialogue.update(BotState::Idle).await?;
@@ -45,8 +59,21 @@ pub async fn handle_start(
 pub async fn handle_help(
     bot: Bot,
     msg: Message,
+    analytics: Analytics,
 ) -> crate::HandlerResult {
     log::info!("User {} requested help", msg.chat.id);
+
+    // Track event
+    if let Some(user) = msg.from.as_ref() {
+        let _ = analytics.track_user(
+            user.id.0 as i64,
+            user.username.as_deref(),
+            Some(&user.first_name),
+            user.last_name.as_deref(),
+            user.language_code.as_deref(),
+        );
+        let _ = analytics.track_event(user.id.0 as i64, EventType::Help, None);
+    }
 
     bot.send_message(msg.chat.id, WELCOME_MESSAGE)
         .parse_mode(ParseMode::MarkdownV2)
@@ -60,8 +87,14 @@ pub async fn handle_cancel(
     bot: Bot,
     msg: Message,
     dialogue: crate::Dialogue,
+    analytics: Analytics,
 ) -> crate::HandlerResult {
     log::info!("User {} cancelled operation", msg.chat.id);
+
+    // Track event
+    if let Some(user) = msg.from.as_ref() {
+        let _ = analytics.track_event(user.id.0 as i64, EventType::Cancelled, None);
+    }
 
     dialogue.update(BotState::Idle).await?;
 

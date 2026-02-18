@@ -2,6 +2,7 @@
 
 use teloxide::prelude::*;
 
+use crate::db::{Analytics, EventType};
 use crate::keyboard::{build_destination_keyboard, raw_send_message};
 use crate::models::SessionData;
 use crate::state::BotState;
@@ -15,12 +16,33 @@ pub async fn handle_content(
     msg: Message,
     dialogue: crate::Dialogue,
     config: Config,
+    analytics: Analytics,
 ) -> crate::HandlerResult {
     log::info!(
         "User {} sent content (message_id: {})",
         msg.chat.id,
         msg.id.0
     );
+
+    // Check if user is blocked
+    if let Some(user) = msg.from.as_ref() {
+        let user_id = user.id.0 as i64;
+
+        if analytics.is_user_blocked(user_id).unwrap_or(false) {
+            log::warn!("Blocked user {} attempted to use the bot", user_id);
+            return Ok(());
+        }
+
+        // Track user and event
+        let _ = analytics.track_user(
+            user_id,
+            user.username.as_deref(),
+            Some(&user.first_name),
+            user.last_name.as_deref(),
+            user.language_code.as_deref(),
+        );
+        let _ = analytics.track_event(user_id, EventType::ContentReceived, None);
+    }
 
     // Create session data with source info
     let mut data = SessionData::new();
